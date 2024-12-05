@@ -190,6 +190,23 @@ struct StructUnpacker<T, N>
 		return StructToTupleVectorImpl<T, decltype(StructToTuple(std::declval<T>()))>(vec);
 	}
 
+	template<typename T, typename... Ts>
+	constexpr T TupleToStruct(std::tuple<Ts...> const& tuple);
+
+	template<typename T, typename... Ts>
+	constexpr std::vector<T> TupleToStructVectorImpl(std::vector<std::tuple<Ts...>> const& vec)
+	{
+		std::vector<T> newVec;
+		newVec.reserve(vec.size());
+
+		for (auto const& tuple : vec)
+		{
+			newVec.push_back(TupleToStruct<T>(tuple));
+		}
+
+		return newVec;
+	}
+
 	template<typename T, typename... Ts, size_t... Is>
 	constexpr T TupleToStructImpl(std::tuple<Ts...> const& tuple, std::index_sequence<Is...>)
 	{
@@ -203,6 +220,10 @@ struct StructUnpacker<T, N>
 					  // Nested struct, we need to get the nested struct's type
 					  // We can assume that T is our 'parent' struct, and that Is is the 'index' of the member in the 'parent' struct
 					  return TupleToStructImpl<CURR_STRUCT_MEMBER_TYPE>(CURR_ELEM, std::make_index_sequence<FieldCount_v<CURR_STRUCT_MEMBER_TYPE>> {});
+					}
+					else if constexpr (IsSpecialisation<CURR_STRUCT_MEMBER_TYPE, std::vector>)
+					{
+						return TupleToStructVectorImpl<CURR_STRUCT_MEMBER_TYPE::value_type>(CURR_ELEM);
 					}
 					else
 					{
